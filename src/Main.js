@@ -10,7 +10,6 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 import "./Main.css";
 import DraggableWidget from "./DraggableWidget";
-import { Divider } from "antd";
 
 
 
@@ -18,7 +17,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 
 const App = () => {
 
-  const categroy = ["ceiling", "Walls", "Floor", "General"];
 
   let pixelscale = 0;
 
@@ -28,6 +26,11 @@ const App = () => {
   let shapeCount = 0;
 
   let prevs = [];
+
+  const ceilcategory = ["Plasterboard", "Plastering", "Painting"];
+  const wallcategory = ["Plasterboard", "Plastering", "Painting", "Trims Paint"];
+  const floorcategory = ["Concrete"];
+  const generalcategory = ["Doors", "Windows"];
 
   const canvasRef = useRef(null);
   const annotationLayerRef = useRef(null);
@@ -52,6 +55,15 @@ const App = () => {
   const [dotCount, setDotCount] = useState(0);
 
   const [selectedOption, setSelectedOption] = useState('');
+  const [subCategory, setSubCategory] = useState(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState('');
+
+  const [labelheader, setLabelHeader] = useState("");
+  const [labelsubheader, setLabelSubHeader] = useState("");
+  const [labelcategory, setLabelCategory] = useState("");
+  const [labelsubcategory, setLabelSubCategory] = useState("");
+  const [islabel, setIsLabel] = useState(false);
+
 
   // const [isOpen, setIsOpen] = useState(false);
   // const [selectedOption, setSelectedOption] = useState('option 1');
@@ -65,13 +77,45 @@ const App = () => {
   //   setIsOpen(false);
   // };
 
-  const isOptionDisabled = (type) => {
+  /*===============Set Label===============*/
+  const isCategoryDisabled = (type) => {
     return type !== drawType;
   };
 
-  const handleOptionSelect = (event) => {
+  const handleCategorySelect = (event) => {
+    console.log("category = ",event.target.value);
     setSelectedOption(event.target.value);
+    switch(event.target.value) {
+      case "Ceiling" :
+        setSubCategory(ceilcategory);
+        break;
+      case "Walls" :
+        setSubCategory(wallcategory);
+        break;
+      case "Floor" :
+        setSubCategory(floorcategory);
+        break;
+      case "General" :
+        setSubCategory(generalcategory);
+        break;
+      default: break;
+    }
   };
+
+  const handleSubCategorySelect = (e) => {
+    setSelectedSubCategory(e.target.value)
+  }
+
+  const setLabel = () => {
+      setLabelHeader(document.getElementById("header").value);
+      setLabelSubHeader(document.getElementById("subheader").value);
+      setLabelSubCategory(document.getElementById("sub-category").value);
+      setLabelCategory(document.getElementById("category").value);
+  
+      closeModal("setLabel");
+  };
+
+  /*=====================FIle Upload===========================*/
 
   const onFileChange = (e) => {
     const selectedfile = e.target.files[0]
@@ -197,6 +241,7 @@ const App = () => {
 
   const settingDrawType = (type) => {
     setDrawType(type);
+    showModal("setLabel");
   }
 
   /*==================Drawing Annotation layer.========================*/
@@ -216,7 +261,6 @@ const App = () => {
     var context = canvas.getContext("2d");
 
     context.clearRect(0, 0, canvas.width, canvas.height)
-    
     prevs && (prevs.forEach(item => {
       console.log("prevs = ", prevs);
       context.beginPath();
@@ -376,7 +420,7 @@ const App = () => {
     }
   }
 
-  const mouseMoveUp = (e) => {
+  const mouseMoveUp = async (e) => {
     var canvas = annotationLayerRef.current
     if(drawType === "scale") {
       let {x, y} = getMousePos(canvas, e);
@@ -387,28 +431,25 @@ const App = () => {
       draw()
       showModal("setScale");
     } else if (drawType === "line") {
-      showModal("setLabel");
-      shapeCount ++;
-      let {x, y} = getMousePos(canvas, e);
-      prevs.push({type: "line", number: shapeCount, x1: start.x, y1: start.y, x2: x, y2: y});
-      setPrevState([
-        ...prevState,
-        {type: "line", number: shapeCount, x1: start.x, y1: start.y, x2: x, y2: y},
-      ]);
-      const measureComp = document.getElementById("measure");
-      measureComp.style.display = "none";
+          shapeCount ++;
+          let {x, y} = getMousePos(canvas, e);
+          prevs.push({type: "line", number: shapeCount, x1: start.x, y1: start.y, x2: x, y2: y});
+          setPrevState([
+            ...prevState,
+            {type: "line", number: shapeCount, x1: start.x, y1: start.y, x2: x, y2: y},
+          ]);
+          const measureComp = document.getElementById("measure");
+          measureComp.style.display = "none";
 
-      var diff = (Math.sqrt((x - start.x) * (x - start.x) + (y - start.y) * (y - start.y)) * scaleValue).toFixed(2);
+          var diff = (Math.sqrt((x - start.x) * (x - start.x) + (y - start.y) * (y - start.y)) * scaleValue).toFixed(2);
 
-      setWidgetData([
-        ...widgetData,
-        {type: "line", number: shapeCount, measure: `${diff} m`, result: `${diff} m`},
-      ])
-
-      start = {}
-      draw()
+          setWidgetData([
+            ...widgetData,
+            {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "line", number: shapeCount, measure: `${diff} m`, result: `${diff} m`},
+          ])
+          start = {}
+          draw()
     } else if (drawType === "rect") {
-      showModal("setLabel");
       let {x, y} = getMousePos(canvas,e);
       prevs.push({type: "rect", number: shapeCount, x: start.x, y: start.y, width: x - start.x, height: y - start.y});
       setPrevState([
@@ -420,7 +461,7 @@ const App = () => {
 
       setWidgetData([
         ...widgetData,
-        {type: "rect", number: shapeCount, measure: `${diff} m2`, result: `${diff} m2`},
+        {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "rect", number: shapeCount, measure: `${diff} m2`, result: `${diff} m2`},
       ])
       
       const measureComp = document.getElementById("measure");
@@ -428,7 +469,6 @@ const App = () => {
       start = {}
       draw()
     } else if (drawType === "dot") {
-      showModal("setLabel");
       setDotCount(dotCount + 1);
       prevs.push({type: "dot", number: shapeCount, x: start.x, y: start.y});
       setPrevState([
@@ -446,7 +486,7 @@ const App = () => {
       } else {
         setWidgetData([
           ...widgetData,
-          {type: "dot", measure: `${dotCount + 1} count`, result: `${dotCount + 1} count`}
+          {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "dot", measure: `${dotCount + 1} count`, result: `${dotCount + 1} count`}
         ])
       }
       start = {}
@@ -484,7 +524,7 @@ const App = () => {
 
           setWidgetData([
             ...widgetData,
-            {type: "poly", measure: `${diff} m2`, result: `${diff} m2`}
+            {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "poly", measure: `${diff} m2`, result: `${diff} m2`}
           ])
 
           const measureComp = document.getElementById("measure");
@@ -623,47 +663,41 @@ const App = () => {
             <div className="modal-body container-fluid">
               <div className="row header">
                 <label className="col-md-4" for="heading">Heading</label>
-                <input className="col-md-8" type="text" id="heading" />
+                <input className="col-md-8" type="text" id="header" />
               </div>
               
               <div className="row sub-header">
                 <label className="col-md-4" for="subheading">Sub heading</label>
-                <input className="col-md-8" type="text" id="subheading" />
+                <input className="col-md-8" type="text" id="subheader" />
               </div>
 
-              {/* <div className="dropdown">
-                <button className="dropdown-toggle" onClick={toggleMenu}>
-                  {selectedOption ? selectedOption : 'Select an option'}
-                </button>
-                {isOpen && (
-                  <ul className="dropdown-menu">
-                    <li onClick={() => handleOptionSelect('Option 1')}>Option 1</li>
-                    <li onClick={() => handleOptionSelect('Option 2')}>Option 2</li>
-                    <li onClick={() => handleOptionSelect('Option 3')}>Option 3</li>
-                  </ul>
-                )}
-              </div> */}
               <div className="dropdown row category">
                 <label className="col-md-4" for="categry">Category</label>
-                <select className="col-md-8" id="category" value={selectedOption} onChange={handleOptionSelect}>
-                  <option value="">Select an option</option>
-                  <option value="Ceiling" disabled={isOptionDisabled('rect')}>Ceiling</option>
-                  <option value="Walls" disabled={isOptionDisabled('line')}>Walls</option>
-                  <option value="Floor" disabled={isOptionDisabled('rect')}>Floor</option>
-                  <option value="General" disabled={isOptionDisabled('dot')}>General</option>
+                <select className="col-md-8" id="category" value={selectedOption} onChange={handleCategorySelect}>
+                  <option value="" disabled>Select an option</option>
+                  <option value="Ceiling" disabled={isCategoryDisabled('rect')}>Ceiling</option>
+                  <option value="Walls" disabled={isCategoryDisabled('line')}>Walls</option>
+                  <option value="Floor" disabled={isCategoryDisabled('rect')}>Floor</option>
+                  <option value="General" disabled={isCategoryDisabled('dot')}>General</option>
                 </select>
               </div>
 
-              <div><h6 className = "result">Enter the known measurements between the two points`(`m`)`</h6></div>
-              <div><h6 className = "result"><b>Warning: </b> Only one scale is allowed per page. Setting the scale will update any existing measurements on this page.</h6></div>
-              <div>
-                <p style={{fontSize:"14px", margin: 0, padding: 0, backgroundColor:"transparent"}}><b>Meter</b></p>
-                <input type="number" placeholder="ex: 56.65" style={{width:"100%"}} id="scaleLength" />
+              <div className="dropdown row subcategory">
+                <label className="col-md-4" for="sub-category">Sub-Category</label>
+                <select className="col-md-8" id="sub-category" value={selectedSubCategory} onChange={handleSubCategorySelect}>
+                  
+                    <option value="" disabled>Select an option</option>
+                  {
+                    subCategory && subCategory.map((index) => (
+                        <option value={index}>{index}</option>
+                    ))
+                  }
+                </select>
               </div>
             </div>
             <div className="modal-footer d-flex justify-content-between">
               <div></div>
-              <div ><button className="btn btn-primary rounded border-2" onClick={setScale}>OK</button></div>
+              <div ><button className="btn btn-primary rounded border-2" onClick={setLabel}>OK</button></div>
             </div>
           </div>
         </div>
