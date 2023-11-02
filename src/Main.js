@@ -171,6 +171,7 @@ const App = () => {
     if (canvas) {
       drawAnnotations();
     }
+    setPrevState([]);
   }, [file, pageNumber]);
 
   const renderPdf = async (data) => {
