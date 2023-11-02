@@ -1,7 +1,5 @@
 const Scale = (props) => {
 
-    // document.getElementById("scale").value = `1 : ${props.viewscale}`;
-
     return (
         <div id="set-scale">
             <hr></hr>

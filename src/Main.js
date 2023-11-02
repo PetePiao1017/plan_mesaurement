@@ -10,6 +10,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 import "./Main.css";
 import DraggableWidget from "./DraggableWidget";
+import { Modal, InputNumber, Input } from "antd";
 
 
 
@@ -17,15 +18,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 
 const App = () => {
 
-
-  let pixelscale = 0;
-
-  let start = {}
-  let polytracker = []
-  let isPoly = false;
   let shapeCount = 0;
 
   let prevs = [];
+
+  
 
   const ceilcategory = ["Plasterboard", "Plastering", "Painting"];
   const wallcategory = ["Plasterboard", "Plastering", "Painting", "Trims Paint"];
@@ -64,27 +61,36 @@ const App = () => {
   const [labelsubcategory, setLabelSubCategory] = useState("");
   const [islabel, setIsLabel] = useState(false);
 
+  const [isFindScaleModalOpen, setIsFindScaleModalOpen] = useState(false);
+  const [isSetScaleModalOpen, setIsSetScaleModalOpen] = useState(false);
+  const [pixelscale, setPixelscale] = useState(0);
+  const [isSetLabelOpen, setIsSetLabelOpen] = useState(false);
+  const [ismeasurelabel, setIsmeasurelabel] = useState(false);
+  const [diff, setDiff] = useState("");
+  const [mouseXpoint, setMouseXpoint] = useState(0.0);
+  const [mouseYpoint, setMouseYpoint] = useState(0.0);
+  const [start, setStart] = useState({});
+  const [polytracker, setPolytracker] = useState([]);
+  const [isPoly, setIsPoly] = useState(false);
 
-  // const [isOpen, setIsOpen] = useState(false);
-  // const [selectedOption, setSelectedOption] = useState('option 1');
+  // Change function for input scale
+  const onChange = (value) => {
 
-  // const toggleMenu = () => {
-  //   setIsOpen(!isOpen);
-  // };
-
-  // const handleOptionSelect = (option) => {
-  //   setSelectedOption(option);
-  //   setIsOpen(false);
-  // };
+    setScaleValue(Math.ceil(
+      (parseInt(value) / pixelscale)));
+  }
+  
 
   /*===============Set Label===============*/
   const isCategoryDisabled = (type) => {
-    return type !== drawType;
+    // console.log("type1 = ", type1);
+    console.log("type = ", type);
+
+    return type !== drawType
   };
 
   const handleCategorySelect = (event) => {
-    console.log("category = ",event.target.value);
-    setSelectedOption(event.target.value);
+    setLabelCategory(event.target.value);
     switch(event.target.value) {
       case "Ceiling" :
         setSubCategory(ceilcategory);
@@ -103,29 +109,16 @@ const App = () => {
   };
 
   const handleSubCategorySelect = (e) => {
-    setSelectedSubCategory(e.target.value)
+    setLabelSubCategory(e.target.value)
   }
 
-  const setLabel = () => {
-      setLabelHeader(document.getElementById("header").value);
-      setLabelSubHeader(document.getElementById("subheader").value);
-      setLabelSubCategory(document.getElementById("sub-category").value);
-      setLabelCategory(document.getElementById("category").value);
-  
-      closeModal("setLabel");
-  };
-
-  /*=====================FIle Upload===========================*/
-
-  const onFileChange = (e) => {
-    const selectedfile = e.target.files[0]
-    setFile(selectedfile);
-    setPageNumber(1);
+  const onheaderChange = (e) => {
+    setLabelHeader(e.target.value);
   }
 
-  const onDocumentLoadSuccess = ({ numPages }) => {
-    setNumPages(numPages);
-  };
+  const onSubheaderChange = (e) => {
+    setLabelSubHeader(e.target.value);
+  }
 
   /*==========================List and Viewer Component Size Setting====================================*/
 
@@ -161,6 +154,16 @@ const App = () => {
   
 
   /*=======================File Upload==================================*/
+
+  const onFileChange = (e) => {
+    const selectedfile = e.target.files[0]
+    setFile(selectedfile);
+    setPageNumber(1);
+  }
+
+  const onDocumentLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+  };
 
   useEffect(() => {
     const canvas = document.getElementById("pdf-canvas");
@@ -200,51 +203,49 @@ const App = () => {
     await page.render(renderContext).promise;
   }; 
 
+/*================= Modal Action(OK/Cancel) ===================== */
 
-  /*=================================== Set the Scale ======================================*/
-
-  const onScaleExplainModal = () =>{
-    setDrawType("scale");
-    showModal("explainScale");
-    
-  }
-
-  const showModal = (id) => {
-    var modal = document.getElementById(id);
-    modal.style.display = "block";
-    modal.classList.add("show");
-  }
-
-  const closeModal = (id) => {
-    var modal = document.getElementById(id);
-    modal.style.display = "none";
-    modal.classList.remove("show");
-  }
-
-  const onSetScaleModal = () => {
-    
-    closeModal("explainScale");
-  }
-
-  const setScale = async () => {
-    var scalelength = document.getElementById("scaleLength").value;
-    setScaleValue(Math.ceil(scalelength / pixelscale))
-
-    document.getElementById("scale").value = `1 : ${scaleValue}`;
-    
-    closeModal("setScale");
-    prevs = [];
-    draw();
-  }
+  const handleOk = (str, type) => {
+    switch(str){
+      case "findpagescale":
+        setIsFindScaleModalOpen(false);
+        setDrawType("scale");
+        break
+      case "setscale":
+        setIsSetScaleModalOpen(false);
+        prevs = [];
+        draw();
+        break
+      case "setlabel":
+        
+        
+        setIsSetLabelOpen(false);
+        setWidgetData([
+          ...widgetData,
+          { 
+            area: labelheader, 
+            subarea: labelsubheader, 
+            category: labelcategory, 
+            subcategory: labelsubcategory, 
+            type: type, number: shapeCount, 
+            measure: `${diff} m`, 
+            result: `${diff} m`},
+        ])
+      default:
+        break
+    }
+  };
+  const handleCancel = () => {
+    setIsFindScaleModalOpen(false);
+  };
 
   /*===================Toolbar Setting==================================*/
 
   const settingDrawType = (type) => {
     setDrawType(type);
-    showModal("setLabel");
   }
 
-  /*==================Drawing Annotation layer.========================*/
+{/*==================Drawing Annotation layer.========================*/}
 
 
 
@@ -262,7 +263,6 @@ const App = () => {
 
     context.clearRect(0, 0, canvas.width, canvas.height)
     prevs && (prevs.forEach(item => {
-      console.log("prevs = ", prevs);
       context.beginPath();
       if(item.type === "scale") {
         context.moveTo(item.x1, item.y1);
@@ -300,7 +300,6 @@ const App = () => {
   
   
     prevState && (prevState.forEach(item => {
-      console.log("prevState = ", prevState);
       context.beginPath();
       if(item.type === "line") {
         context.moveTo(item.x1, item.y1);
@@ -335,209 +334,199 @@ const App = () => {
   const mouseDownDraw = (e) => {
       const canvas = annotationLayerRef.current;
 
-      start = getMousePos(canvas, e);
+      setStart(getMousePos(canvas,e));
       if(drawType === "poly" && !isPoly) {
-        isPoly = true;
-        polytracker.push(start);
+        setIsPoly(true);
+        setPolytracker([...polytracker, getMousePos(canvas, e)]);
       }
   }
 
   const mouseMoveDraw = (e) => {
     const canvas = annotationLayerRef.current;
     var context = canvas.getContext("2d");
+    
+    setMouseXpoint(e.clientX);
+    setMouseYpoint(e.clientY);
 
     if(start.x) {
       draw();
-      
       let { x, y } = getMousePos(canvas, e);
       context.beginPath();
-      if(drawType === "scale") {
-        context.strokeStyle = "red";
-        context.lineWidth = 4;
-        context.moveTo(start.x, start.y);
-        context.lineTo(x , y);
-        context.stroke();
-      } else if(drawType === "line") {
-        const measureComp = document.getElementById("measure");
-        measureComp.style.left = `${e.clientX + 30}px`;
-        measureComp.style.top = `${e.clientY + 15}px`;
-        measureComp.style.display = "block";
 
-        context.strokeStyle = "red";
-        context.lineWidth = 4;
-        context.moveTo(start.x, start.y);
-        context.lineTo(x , y);
-        context.stroke();
-        var diff = (Math.sqrt((x - start.x) * (x - start.x) + (y - start.y) * (y - start.y)) * scaleValue).toFixed(2);
-        measureComp.innerText = `${diff} m`;
-
-      } else if(drawType === "rect") {
-        const measureComp = document.getElementById("measure");
-        measureComp.style.left = `${e.clientX + 30}px`;
-        measureComp.style.top = `${e.clientY + 15}px`;
-        measureComp.style.display = "block";
-
-        context.fillStyle = "rgba(255, 0, 0, 0.7)";
-        context.rect(start.x, start.y, x - start.x, y - start.y);
-        context.fill();
-
-        diff = Math.abs((x - start.x) * (y - start.y) * scaleValue * scaleValue).toFixed(2);
-        measureComp.innerText = `${diff} m2`;
-      } else if(drawType === "poly" && isPoly) {
-
-        context.strokeStyle = "red";
-        context.lineWidth = "4";
-        context.moveTo(polytracker[0].x, polytracker[0].y);
-
-        let sumX = 0;
-        let sumY = 0;
-
-        for(var i = 1; i < polytracker.length; i++) {
-          context.lineTo(polytracker[i].x, polytracker[i].y);
+      switch(drawType){
+        case "scale":
+          context.strokeStyle = "red";
+          context.lineWidth = 4;
+          context.moveTo(start.x, start.y);
+          context.lineTo(x , y);
           context.stroke();
-        }
-
-        context.lineTo(x, y);
-        context.stroke();
-
-        if(polytracker.length > 1) {
-          for( i = 0; i < polytracker.length - 1; i++) {
-            sumX += polytracker[i].x * polytracker[i + 1].y;
-            sumY += polytracker[i].y * polytracker[i + 1].x;
+          break
+        case "line":
+          setIsmeasurelabel(true);
+          context.strokeStyle = "red";
+          context.lineWidth = 4;
+          context.moveTo(start.x, start.y);
+          context.lineTo(x , y);
+          context.stroke();
+          setDiff((Math.sqrt((x - start.x) * (x - start.x) + (y - start.y) * (y - start.y)) * scaleValue).toFixed(2).toString());
+          break
+        case "rect":
+          setIsmeasurelabel(true);
+          context.fillStyle = "rgba(255, 0, 0, 0.7)";
+          context.rect(start.x, start.y, x - start.x, y - start.y);
+          context.fill();
+          setDiff(Math.abs((x - start.x) * (y - start.y) * scaleValue * scaleValue).toFixed(2).toString());
+          break
+        case "poly":
+          if(isPoly){
+            setIsmeasurelabel(true);
+            context.strokeStyle = "red";
+            context.lineWidth = "4";
+            context.moveTo(polytracker[0].x, polytracker[0].y);
+    
+            let sumX = 0;
+            let sumY = 0;
+    
+            for(var i = 1; i < polytracker.length; i++) {
+              context.lineTo(polytracker[i].x, polytracker[i].y);
+              context.stroke();
+            }
+    
+            context.lineTo(x, y);
+            context.stroke();
+    
+            if(polytracker.length > 1) {
+              for( i = 0; i < polytracker.length - 1; i++) {
+                sumX += polytracker[i].x * polytracker[i + 1].y;
+                sumY += polytracker[i].y * polytracker[i + 1].x;
+              }
+              sumX += (polytracker[polytracker.length-1].x * y + y * polytracker[0].x);
+              sumY += (polytracker[polytracker.length-1].y * x + x * polytracker[0].y);
+            } 
+    
+            setDiff((Math.abs(sumX - sumY) / 2 * scaleValue * scaleValue).toFixed(2).toString());
           }
-          sumX += (polytracker[polytracker.length-1].x * y + y * polytracker[0].x);
-          sumY += (polytracker[polytracker.length-1].y * x + x * polytracker[0].y);
-        } 
-
-        diff = (Math.abs(sumX - sumY) / 2 * scaleValue * scaleValue).toFixed(2);
-
-        const measureComp = document.getElementById("measure");
-        measureComp.style.left = `${e.clientX + 30}px`;
-        measureComp.style.top = `${e.clientY + 15}px`;
-        measureComp.style.display = "block";
-        measureComp.innerText = `${diff} m2`;
       }
     }
   }
 
-  const mouseMoveUp = async (e) => {
-    var canvas = annotationLayerRef.current
-    if(drawType === "scale") {
-      let {x, y} = getMousePos(canvas, e);
-      
-      prevs.push({type: "scale", x1: start.x, y1: start.y, x2: x, y2: y });
-      pixelscale = Math.sqrt((x - start.x) * (x - start.x) + (y - start.y) * (y - start.y));
-      start = {}
-      draw()
-      showModal("setScale");
-    } else if (drawType === "line") {
-          shapeCount ++;
-          let {x, y} = getMousePos(canvas, e);
-          prevs.push({type: "line", number: shapeCount, x1: start.x, y1: start.y, x2: x, y2: y});
-          setPrevState([
-            ...prevState,
-            {type: "line", number: shapeCount, x1: start.x, y1: start.y, x2: x, y2: y},
-          ]);
-          const measureComp = document.getElementById("measure");
-          measureComp.style.display = "none";
+  const mouseMoveUp = (e) => {
+    var canvas = annotationLayerRef.current;
+    let {x, y} = getMousePos(canvas, e);
 
-          var diff = (Math.sqrt((x - start.x) * (x - start.x) + (y - start.y) * (y - start.y)) * scaleValue).toFixed(2);
+    switch(drawType){
+      case "scale":
+        prevs.push({type: "scale", x1: start.x, y1: start.y, x2: x, y2: y });
+        setPixelscale(Math.sqrt((x - start.x) * (x - start.x) + (y - start.y) * (y - start.y)));
+        setStart({});
+        draw()
+        setIsSetScaleModalOpen(true);
+        break
+      case "line":
+        setIsSetLabelOpen(true);
+        shapeCount ++;
+        prevs.push({type: "line", number: shapeCount, x1: start.x, y1: start.y, x2: x, y2: y});
+        setPrevState([
+          ...prevState,
+          {type: "line", number: shapeCount, x1: start.x, y1: start.y, x2: x, y2: y},
+        ]);
+        setIsmeasurelabel(false);
 
-          setWidgetData([
-            ...widgetData,
-            {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "line", number: shapeCount, measure: `${diff} m`, result: `${diff} m`},
-          ])
-          start = {}
-          draw()
-    } else if (drawType === "rect") {
-      let {x, y} = getMousePos(canvas,e);
-      prevs.push({type: "rect", number: shapeCount, x: start.x, y: start.y, width: x - start.x, height: y - start.y});
-      setPrevState([
-        ...prevState,
-        {type: "rect", number: shapeCount, x: start.x, y: start.y, width: x - start.x, height: y - start.y}
-      ]);
+        setDiff((Math.sqrt((x - start.x) * (x - start.x) + (y - start.y) * (y - start.y)) * scaleValue).toFixed(2).toString());
 
-      diff = Math.abs((x - start.x) * (y - start.y) * scaleValue * scaleValue).toFixed(2);
+       
+        setStart({});
+        draw()
+        break
+      case "rect":
+        setIsSetLabelOpen(true);
+        prevs.push({type: "rect", number: shapeCount, x: start.x, y: start.y, width: x - start.x, height: y - start.y});
+        setPrevState([
+          ...prevState,
+          {type: "rect", number: shapeCount, x: start.x, y: start.y, width: x - start.x, height: y - start.y}
+        ]);
 
-      setWidgetData([
-        ...widgetData,
-        {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "rect", number: shapeCount, measure: `${diff} m2`, result: `${diff} m2`},
-      ])
-      
-      const measureComp = document.getElementById("measure");
-      measureComp.style.display = "none";
-      start = {}
-      draw()
-    } else if (drawType === "dot") {
-      setDotCount(dotCount + 1);
-      prevs.push({type: "dot", number: shapeCount, x: start.x, y: start.y});
-      setPrevState([
-        ...prevState,
-        {type: "dot", number: shapeCount, x: start.x, y: start.y}
-      ])
-      if(dotCount !== 0) {
-        const newwidgetData = widgetData.map(item => {
-          if(item.type === "dot") {
-            return {...item, measure: `${dotCount + 1} count`, result: `${dotCount + 1} count`}
-          }
-          return item;
-        })
-        setWidgetData(newwidgetData);
-      } else {
-        setWidgetData([
-          ...widgetData,
-          {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "dot", measure: `${dotCount + 1} count`, result: `${dotCount + 1} count`}
-        ])
-      }
-      start = {}
-      draw();
-    } else if (drawType === "poly") {
-
-      let {x, y} = getMousePos(canvas, e);
-
-      const limit = 5;
-
-      if(polytracker.length > 2) {
-        var firstX = polytracker[0].x;
-        var firstY = polytracker[0].y;
+        setDiff(Math.abs((x - start.x) * (y - start.y) * scaleValue * scaleValue).toFixed(2).toString());
 
         
-        diff = Math.sqrt((x - firstX) * (x - firstX) + (y - firstY) * (y - firstY));
-        if(diff < limit) {
-          isPoly = false;
-          prevs.push({type: "poly", number: shapeCount, track: polytracker});
-          setPrevState([
-            ...prevState,
-            {type: "poly", number: shapeCount, track: polytracker}
-          ]);
+        
+        setIsmeasurelabel(false);
 
-          let sumX = 0;
-          let sumY = 0;
-          for (var i = 0; i < polytracker.length-1; i++) {
-            sumX += polytracker[i].x * polytracker[i + 1].y;
-            sumY += polytracker[i].y * polytracker[i + 1].x;
+        setStart({});
+        draw()
+        break
+      case "poly":
+        const limit = 5;
+        if(polytracker.length > 2) {
+          var firstX = polytracker[0].x;
+          var firstY = polytracker[0].y;
+
+          
+          setDiff(Math.sqrt((x - firstX) * (x - firstX) + (y - firstY) * (y - firstY)).toString());
+          let temp = Math.sqrt((x - firstX) * (x - firstX) + (y - firstY) * (y - firstY));
+          if(temp < limit) {
+            setIsPoly(false);
+            
+            prevs.push({type: "poly", number: shapeCount, track: polytracker});
+            setPrevState([
+              ...prevState,
+              {type: "poly", number: shapeCount, track: polytracker}
+            ]);
+
+            let sumX = 0;
+            let sumY = 0;
+            for (var i = 0; i < polytracker.length-1; i++) {
+              sumX += polytracker[i].x * polytracker[i + 1].y;
+              sumY += polytracker[i].y * polytracker[i + 1].x;
+            }
+            sumX += polytracker[polytracker.length-1].x * polytracker[0].y;
+            sumY += polytracker[polytracker.length-1].y * polytracker[0].x;
+
+            setDiff((Math.abs(sumX - sumY) / 2 * scaleValue * scaleValue).toFixed(2).toString());
+
+           
+
+            setIsmeasurelabel(false);
+
+            setPolytracker([]);
+            draw();
+            setIsSetLabelOpen(true);
+          } else {
+            setPolytracker([...polytracker, {x,y}]);
           }
-          sumX += polytracker[polytracker.length-1].x * polytracker[0].y;
-          sumY += polytracker[polytracker.length-1].y * polytracker[0].x;
-
-          diff = (Math.abs(sumX - sumY) / 2 * scaleValue * scaleValue).toFixed(2);
-
+        } else {
+          setPolytracker([...polytracker, {x,y}]);
+        }
+        break
+      case "dot":
+        setIsSetLabelOpen(true);
+        setDotCount(dotCount + 1);
+        prevs.push({type: "dot", number: shapeCount, x: start.x, y: start.y});
+        setPrevState([
+          ...prevState,
+          {type: "dot", number: shapeCount, x: start.x, y: start.y}
+        ])
+        if(dotCount !== 0) {
+          const newwidgetData = widgetData.map(item => {
+            if(item.type === "dot") {
+              return {...item, measure: `${dotCount + 1} count`, result: `${dotCount + 1} count`}
+            }
+            return item;
+          })
+          setWidgetData(newwidgetData);
+        } else {
           setWidgetData([
             ...widgetData,
-            {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "poly", measure: `${diff} m2`, result: `${diff} m2`}
+            {area: labelheader, subarea: labelsubheader, category: labelcategory, subcategory: labelsubcategory, type: "dot", measure: `${dotCount + 1} count`, result: `${dotCount + 1} count`}
           ])
-
-          const measureComp = document.getElementById("measure");
-          measureComp.style.display = "none";
-          polytracker = [];
-          draw();
-        } else {
-          polytracker.push({x, y});
         }
-      } else {
-        polytracker.push({x, y});
-      }
+        start = {}
+        draw();
+        break
+      default:
+        break
     }
+
   }
 
   return (
@@ -576,15 +565,24 @@ const App = () => {
                       </div>
                     ))}
                   </div>
-                  <Scale onClick={onScaleExplainModal} viewscale ={scaleValue} />
+                  <Scale onClick={() => setIsFindScaleModalOpen(true)} viewscale ={scaleValue} />
                 </Document>
               </div>
             </div>
             <div className="col-md-10 page"  ref={viewRef}>
 
             <DraggableToolbar onClick={settingDrawType} />
-            <DraggableWidget widgetData={widgetData} />
-            <div id="measure" style={{display: "none "}}>Hello</div>
+            <DraggableWidget widgetData={widgetData}  />
+            {
+              ismeasurelabel ? <h5 style={{
+                position: "absolute",
+                top: `${mouseYpoint + 30}px`,
+                left: `${mouseXpoint + 15}px`,
+                zIndex: "1000",
+              }}>{
+                drawType === "line" ? `${diff}m` : `${diff}m2`
+                }</h5> : ""
+            }
               
               <div className="pageviewer">
                 <canvas 
@@ -609,100 +607,117 @@ const App = () => {
         )
       }
 
-      <div className="modal fade" id="explainScale" tabIndex="-1" aria-labelledby="confirmModalLabel" style={{display: "none"}} aria-hidden="false">
-        <div className="modal-dialog">
-          <div className="modal-content border border-3 border-dark" style={{backgroundColor: "#ffffff", border: "30px"}}>
-            <div className="modal-header text-center">
-              <h5 className="modal-title text-center fw-bold" id="confirmModalLabel1">Find Page Scale</h5>            
+      
+      {/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */}
+      {/* Modal for Fing Page Scale */}
+
+      <Modal 
+        title = "Find Page Scale"
+        open= {isFindScaleModalOpen}
+        onOk = {() => handleOk("findpagescale")}
+        onCancel={handleCancel}  
+      >
+        <h6 className = "result">
+          1. Measure an known length in the Page.Logger is better for accuracy
+        </h6>
+        <h6 className = "result">
+          2. Double click to finish
+        </h6>
+        <h6 className = "result">
+          3. Input lenght  according to plan can  1librate this page 
+        </h6>
+      </Modal>
+
+      {/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */}
+      {/* Modal For Set Scale */}
+      <Modal 
+        title = "Set Scale"
+        open = {isSetScaleModalOpen}
+        onOk = {() => handleOk("setscale")}
+        >
+            <div>
+              <h6 className = "result">
+                Enter the known measurements between the two points`(`m`)`
+              </h6>
             </div>
-            <div className="modal-body">
-              <h6 className = "result">1. Measure an known length in the Page.Logger is better for accuracy</h6>
-              <h6 className = "result">2. Double click to finish</h6>
-              <h6 className = "result">3. Input lenght  according to plan can  1librate this page </h6>
+            <div><h6 className = "result">
+              <b>Warning: </b> Only one scale is allowed per page. Setting the scale will update any existing measurements on this page.
+              </h6>
             </div>
-            <div className="modal-footer d-flex justify-content-between">
-              <div></div>
-              <div className="d-flex">
-                <div ><button className="btn btn-defalut rounded border-2" onClick={onSetScaleModal}>Cancle</button></div>
-                <div ><button className="btn btn-primary rounded border-2" onClick={onSetScaleModal}>OK</button></div>
-              </div>
+            <div>
+                <p 
+                  style={{
+                    fontSize:"14px", 
+                    margin: 0, 
+                    padding: 0, 
+                    backgroundColor:"transparent"
+                  }}>
+                  <b>Meter</b>
+                </p>
+                <InputNumber 
+                  placeholder="ex: 56.65" 
+                  style={{width:"100%"}}  
+                  onChange={onChange}  
+                />
+              </div> 
+      </Modal>
+        
+      {/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */}
+      {/* Modal for Set Label */}
+      <Modal 
+        title = "Set Label"
+        open = {isSetLabelOpen}
+        onOk = { () => handleOk("setlabel", drawType)}
+        onCancel={handleCancel}
+      >
+        <div className="row header">
+          <label className="col-md-4" for="heading">Heading</label>
+          <Input 
+            className="col-md-8" 
+            type="text" 
+            name = "header" 
+            placeholder = "Unit 1"
+            value = {labelheader}
+            onChange = {onheaderChange}
+          />
+        </div>
               
-            </div>
-          </div>
+        <div className="row sub-header">
+          <label className="col-md-4" for="subheading">Sub heading</label>
+          <Input 
+            className="col-md-8" 
+            type="text" 
+            name = "subheader"
+            placeholder = "Kitchen"
+            value = {labelsubheader}
+            onChange = {onSubheaderChange}
+          />
         </div>
-      </div>
 
-      <div className="modal fade" id="setScale" tabIndex="-1" aria-labelledby="confirmModalLabel" style={{display: "none"}} aria-hidden="false">
-        <div className="modal-dialog">
-          <div className="modal-content border border-3 border-dark" style={{backgroundColor: "#ffffff", border: "30px"}}>
-            <div className="modal-header text-center">
-              <h5 className="modal-title text-center fw-bold" id="confirmModalLabel1">Set Scale</h5>            
-            </div>
-            <div className="modal-body">
-              <div><h6 className = "result">Enter the known measurements between the two points`(`m`)`</h6></div>
-              <div><h6 className = "result"><b>Warning: </b> Only one scale is allowed per page. Setting the scale will update any existing measurements on this page.</h6></div>
-              <div>
-                <p style={{fontSize:"14px", margin: 0, padding: 0, backgroundColor:"transparent"}}><b>Meter</b></p>
-                <input type="number" placeholder="ex: 56.65" style={{width:"100%"}} id="scaleLength" />
-              </div>
-            </div>
-            <div className="modal-footer d-flex justify-content-between">
-              <div></div>
-              <div ><button className="btn btn-primary rounded border-2" onClick={setScale}>OK</button></div>
-            </div>
-          </div>
+        <div className="dropdown row category">
+          <label className="col-md-4" for="categry">Category</label>
+          <select className="col-md-8" id="category" value={labelcategory} onChange={handleCategorySelect}>
+            <option value="" disabled>Select an option</option>
+            <option value="Ceiling" disabled={isCategoryDisabled('rect')}>Ceiling</option>
+            <option value="Walls" disabled={isCategoryDisabled('line')}>Walls</option>
+            <option value="Floor" disabled={isCategoryDisabled('rect')}>Floor</option>
+            <option value="General" disabled={isCategoryDisabled('dot')}>General</option>
+          </select>
         </div>
-      </div>
 
-      <div className="modal fade" id="setLabel" tabIndex="-1" aria-labelledby="confirmModalLabel" style={{display: "none"}} aria-hidden="false">
-        <div className="modal-dialog">
-          <div className="modal-content border border-3 border-dark" style={{backgroundColor: "#ffffff", border: "30px"}}>
-            <div className="modal-header text-center">
-              <h5 className="modal-title text-center fw-bold" id="confirmModalLabel1">Set Label</h5>            
-            </div>
-            <div className="modal-body container-fluid">
-              <div className="row header">
-                <label className="col-md-4" for="heading">Heading</label>
-                <input className="col-md-8" type="text" id="header" />
-              </div>
-              
-              <div className="row sub-header">
-                <label className="col-md-4" for="subheading">Sub heading</label>
-                <input className="col-md-8" type="text" id="subheader" />
-              </div>
-
-              <div className="dropdown row category">
-                <label className="col-md-4" for="categry">Category</label>
-                <select className="col-md-8" id="category" value={selectedOption} onChange={handleCategorySelect}>
-                  <option value="" disabled>Select an option</option>
-                  <option value="Ceiling" disabled={isCategoryDisabled('rect')}>Ceiling</option>
-                  <option value="Walls" disabled={isCategoryDisabled('line')}>Walls</option>
-                  <option value="Floor" disabled={isCategoryDisabled('rect')}>Floor</option>
-                  <option value="General" disabled={isCategoryDisabled('dot')}>General</option>
-                </select>
-              </div>
-
-              <div className="dropdown row subcategory">
-                <label className="col-md-4" for="sub-category">Sub-Category</label>
-                <select className="col-md-8" id="sub-category" value={selectedSubCategory} onChange={handleSubCategorySelect}>
-                  
-                    <option value="" disabled>Select an option</option>
-                  {
-                    subCategory && subCategory.map((index) => (
-                        <option value={index}>{index}</option>
-                    ))
-                  }
-                </select>
-              </div>
-            </div>
-            <div className="modal-footer d-flex justify-content-between">
-              <div></div>
-              <div ><button className="btn btn-primary rounded border-2" onClick={setLabel}>OK</button></div>
-            </div>
-          </div>
+        <div className="dropdown row subcategory">
+          <label className="col-md-4" for="sub-category">Sub-Category</label>
+          <select className="col-md-8" id="sub-category" value={labelsubcategory} onChange={handleSubCategorySelect}>
+            
+              <option value="" disabled>Select an option</option>
+            {
+              subCategory && subCategory.map((index) => (
+                  <option value={index}>{index}</option>
+              ))
+            }
+          </select>
         </div>
-      </div>
-
+      </Modal>
     </div>
   );
 };
