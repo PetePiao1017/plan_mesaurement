@@ -27,11 +27,9 @@ db.sequelize.sync()
 //   console.log("Drop and re-sync db.");
 // });
 
-require("./app/routes/turorial.routes")(app);
 require("./app/routes/user.routes")(app);
 require("./app/routes/category.routes")(app);
 require("./app/routes/measure.routes")(app);
-
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
@@ -42,7 +40,6 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
   });
 }
-
 
 // set port, listen for requests
 const PORT = process.env.PORT || 5000;

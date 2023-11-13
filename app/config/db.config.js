@@ -1,8 +1,8 @@
 module.exports = {
-  HOST: "plan_measurement.com",
-  USER: "qsprowzerco_plan",
-  PASSWORD: "Thisis%%3888",
-  DB: "qsprowzerco_plan",
+  HOST: "localhost",
+  USER: "root",
+  PASSWORD: "",
+  DB: "plan",
   dialect: "mysql",
   pool: {
     max: 5,
