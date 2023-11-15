@@ -44,34 +44,4 @@ exports.save = (req, res) => {
         
     }
     )
-    // const {area, subarea, category, subcategory, type, unit, measure,  result, price} = req.body;
-    // Measure.destroy({
-    //     where: {},
-    //     truncate: true
-    //   })
-    // .then(data => {
-    //     Measure.create({
-    //         area: area,
-    //         subarea: subarea,
-    //         category: category,
-    //         subcategory: JSON.stringify(subcategory),
-    //         type: type,
-    //         unit: unit,
-    //         measure: measure,
-    //         HDP: 0,
-    //         total: result,
-    //         price: price,
-    //     })
-    //     .then(data => {
-    //         res.status(200).send({
-    //             data: "success"
-    //         });
-    //     })
-    //     .catch(err => {
-    //         res.status(500).send({
-    //             message: err.message || "Some error occured while creating the measuring data."
-    //         })
-    //     })
-    // })
-    // 
 };

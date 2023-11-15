@@ -19,7 +19,6 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
-db.tutorials = require("./tutorial.model.js")(sequelize, Sequelize);
 db.users = require('./user.model.js')(sequelize, Sequelize);
 db.categories = require("./category.model.js")(sequelize, Sequelize);
 db.measures = require("./measure.model.js")(sequelize, Sequelize);
